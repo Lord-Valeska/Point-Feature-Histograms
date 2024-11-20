@@ -142,6 +142,12 @@ def draw_plane(fig, normal, pt, color=(0.1, 0.2, 0.5, 0.3), length=[-1, 1], widt
     plt.ioff() #turn off interactive plotting
     return fig
 
+def draw_vector(fig, normal, pt, color='r', length=0.02):
+    x, y, z = pt
+    nx, ny, nz = normal
+    ax = fig.gca()
+    ax.quiver(x, y, z, nx, ny, nz, color=color, length=length, normalize=True)
+    return fig
 
 def add_noise(pc, variance,distribution='gaussian'):
     """Add Gaussian noise to pc.

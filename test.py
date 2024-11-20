@@ -17,13 +17,19 @@ if __name__ == '__main__':
     P = utils.convert_pc_to_matrix(pc_source)
     Q = utils.convert_pc_to_matrix(pc_target)
 
+    # Test for kNNs
     k = 16
     r = 0.03
     pfh_source = PFH(P, r, k)
-    neighbors = np.matrix(pfh_source.getkNNs(P[:, 100].squeeze()).T)
+    neighbors = np.matrix(pfh_source.get_kNNs(P[:, 0].squeeze()).T)
     pc_neighbors = utils.convert_matrix_to_pc(neighbors)
     
-    utils.view_pc([pc_source, pc_neighbors], None, ['b', 'r'], ['^', 'o'])
+    fig = utils.view_pc([pc_source, pc_neighbors], None, ['b', 'r'], ['^', 'o'])
+
+    # Test for getting normals
+    normals = pfh_source.get_normals()
+    for i in range(len(normals)):
+        utils.draw_vector(fig, normals[i].squeeze(), P[:, i], color='y')
 
     plt.axis([-0.15, 0.15, -0.15, 0.15, -0.1, 0.1])
     plt.show()
