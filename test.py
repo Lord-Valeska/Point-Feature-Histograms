@@ -4,7 +4,7 @@ import numpy
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pfh import PFH, get_correspondence, get_transform, get_error
+from pfh import PFH, SPFH, FPFH, get_correspondence, get_transform, get_error
 
 if __name__ == '__main__':
     # Load point clouds
@@ -57,13 +57,13 @@ if __name__ == '__main__':
     # plt.show()
 
     # Test for getting correspondence
-    threshold=0.0004683
+    threshold=0.001
     k = 8
     r = 0.03
-    pfh_source = PFH(source, r, k, 2, 4)
-    pfh_target = PFH(target, r, k, 2, 4)
+    pfh_source = FPFH(source, r, k, 2, 3)
+    pfh_target = FPFH(target, r, k, 2, 3)
 
-    while True:
+    for i in range(10):
         C = get_correspondence(pfh_source, pfh_target)
         R, t = get_transform(C)
         aligned = pfh_source.transform(R, t)

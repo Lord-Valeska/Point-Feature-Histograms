@@ -194,6 +194,72 @@ class PFH(object):
         self.normals = self.get_normals()
         return self.pc
 
+class SPFH(PFH):
+    def get_features(self, idx):
+        """
+        Make sure self.nfeatures == 3.
+
+        idx - point index in self.pc
+
+        RETURN:
+        ndarray of size (self.nneighbors, self.nfeatures).
+        """
+        neighbor_indices = self.get_kNNs(idx)
+        features = []
+        i_idx = idx
+        p_i = self.pc[i_idx]
+        n_i = self.normals[i_idx]
+        for j_idx in neighbor_indices:
+            p_j = self.pc[j_idx]
+            n_j = self.normals[j_idx]
+            if np.arccos(np.dot(n_i, p_j - p_i)) <= np.arccos(np.dot(n_j, p_i - p_j)):
+                source_idx = i_idx
+                source_point = p_i
+                target_idx = j_idx
+                target_point = p_j
+            else:
+                source_idx = j_idx
+                source_point = p_j
+                target_idx = i_idx
+                target_point = p_i
+            d = np.linalg.norm(target_point - source_point)
+            # Construct the Darboux frame
+            u = self.normals[source_idx]
+            v = np.cross((target_point - source_point), u)
+            w = np.cross(u, v)
+            # Construct the four features (including the distance)
+            nt = self.normals[target_idx]
+            f1 = np.dot(v, nt)
+            f2 = d
+            f3 = np.dot(u, (target_point - source_point) / d)
+            f4 = np.arctan(np.dot(w, nt) / np.dot(u, nt))
+            if self.nfeatures == 4:
+                features.append(np.array([f1, f2, f3, f4]))
+            elif self.nfeatures == 3:
+                features.append(np.array([f1, f3, f4]))
+        features = np.asarray(features)
+        return features
+
+class FPFH(SPFH):
+    def __init__(self, pointcloud, radius, num_neighbors=8, div=2, num_features=4):
+        super().__init__(pointcloud, radius, num_neighbors, div, num_features)
+        self.histogram = []
+        for i in range(self.pc.shape[0]):
+            self.histogram.append(self.get_feature_histogram(i))
+        self.histogram = np.asarray(self.histogram)
+    
+    def get_all_histograms(self):
+        N = self.pc.shape[0]
+        histograms = np.zeros((N, self.div ** self.nfeatures))
+        for i in range(N):
+            neighbor_indices = self.get_kNNs(i)
+            sum_SPF = np.zeros_like(self.histogram[0])
+            for neighbor_idx in neighbor_indices:
+                distance = np.linalg.norm(self.pc[neighbor_idx] - self.pc[i])
+                sum_SPF += (1 / distance) * self.histogram[neighbor_idx]
+            histograms[i] = self.histogram[i] + (1 / len(neighbor_indices)) * sum_SPF
+        return histograms
+
 def get_correspondence(pfh_source, pfh_target):
     C = []
     histogram_source = pfh_source.get_all_histograms()
