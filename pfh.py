@@ -260,27 +260,74 @@ class FPFH(SPFH):
             histograms[i] = self.histogram[i] + (1 / len(neighbor_indices)) * sum_SPF
         return histograms
 
+# # Old version for correspondence
+# def get_correspondence(pfh_source, pfh_target):
+#     C = []
+#     histogram_source = pfh_source.get_all_histograms()
+#     histogram_target = pfh_target.get_all_histograms()
+#     for i in range(pfh_source.get_size()):
+#         p = pfh_source.get_point(i)
+#         histogram_p= histogram_source[i]
+#         epsilon = 1e-10
+#         numerator = (histogram_target - histogram_p) ** 2
+#         denominator = histogram_target + histogram_p + epsilon
+#         chi_squared_distances = np.sum(numerator / denominator, axis=1)
+#         min_index = np.argmin(chi_squared_distances)
+#         q = pfh_target.get_point(min_index)
+#         C.append([p, q])
+#     C = np.asarray(C) # (N, 2, 3)
+#     return C
+
+# def get_transform(C):
+#     # Step 0
+#     Cp = C[:, 0, :] # (N, 3)
+#     Cq = C[:, 1, :] # (N, 3)
+#     # Step 1
+#     p_bar = np.mean(Cp, axis=0)
+#     q_bar = np.mean(Cq, axis=0)
+#     X = Cp - p_bar
+#     Y = Cq - q_bar
+#     # Step 2
+#     S = X.T @ Y
+#     U, sigma, V_T = np.linalg.svd(S)
+#     # Step 3
+#     M = np.eye(3)
+#     M[2, 2] = np.linalg.det(V_T.T @ U.T)
+#     R = V_T.T @ M @ U.T
+#     t = q_bar.reshape(3, 1) - R @ p_bar.reshape(3, 1)
+#     return R, t
+
+# def get_error(C, R, t):
+#     Cp = C[:, 0, :] # (N, 3)
+#     Cq = C[:, 1, :] # (N, 3)
+#     errors = (((R @ Cp.T).T + t.reshape(1, 3)) - Cq) ** 2
+#     return np.sum(errors)
+
+# New version for missing points
 def get_correspondence(pfh_source, pfh_target):
-    C = []
+    C = {}
     histogram_source = pfh_source.get_all_histograms()
     histogram_target = pfh_target.get_all_histograms()
     for i in range(pfh_source.get_size()):
-        p = pfh_source.get_point(i)
+        p = tuple(pfh_source.get_point(i))
         histogram_p= histogram_source[i]
         epsilon = 1e-10
         numerator = (histogram_target - histogram_p) ** 2
         denominator = histogram_target + histogram_p + epsilon
         chi_squared_distances = np.sum(numerator / denominator, axis=1)
+        min_dist = np.min(chi_squared_distances)
         min_index = np.argmin(chi_squared_distances)
-        q = pfh_target.get_point(min_index)
-        C.append([p, q])
-    C = np.asarray(C) # (N, 2, 3)
+        q = tuple(pfh_target.get_point(min_index))
+        if q in C:
+            if min_dist < C[q][1]:
+                C[q] = [p, min_dist]
+        else:
+            C[q] = [p, min_dist]
     return C
 
 def get_transform(C):
     # Step 0
-    Cp = C[:, 0, :] # (N, 3)
-    Cq = C[:, 1, :] # (N, 3)
+    Cp, Cq = get_pq(C)
     # Step 1
     p_bar = np.mean(Cp, axis=0)
     q_bar = np.mean(Cq, axis=0)
@@ -297,7 +344,16 @@ def get_transform(C):
     return R, t
 
 def get_error(C, R, t):
-    Cp = C[:, 0, :] # (N, 3)
-    Cq = C[:, 1, :] # (N, 3)
+    Cp, Cq = get_pq(C)
     errors = (((R @ Cp.T).T + t.reshape(1, 3)) - Cq) ** 2
     return np.sum(errors)
+
+def get_pq(C):
+    Cq = []
+    Cp = []
+    for key in C:
+        Cq.append(key)
+        Cp.append(C[key][0])
+    Cq = np.asarray(Cq)
+    Cp = np.asarray(Cp)
+    return Cp, Cq

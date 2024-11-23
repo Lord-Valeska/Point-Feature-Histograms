@@ -10,8 +10,13 @@ if __name__ == '__main__':
     # Load point clouds
     print("Loading point clouds ......")
     pc_source = utils.load_pc('data/cloud_icp_source.csv')
-    pc_target = utils.load_pc('data/cloud_icp_target0.csv')
+    pc_target = utils.load_pc('data/cloud_icp_target3.csv')
     print("Loaded")
+
+    pc_target = pc_target[150:]
+    # pc_target_1 = pc_target[300:]
+    # pc_target_2 = pc_target[:150]
+    # pc_target = np.concatenate((pc_target_1, pc_target_2))
 
     # Convert point clouds into matrix
     P = utils.convert_pc_to_matrix(pc_source)
@@ -60,10 +65,10 @@ if __name__ == '__main__':
     threshold=0.001
     k = 8
     r = 0.03
-    pfh_source = FPFH(source, r, k, 2, 3)
-    pfh_target = FPFH(target, r, k, 2, 3)
+    pfh_source = FPFH(source, r, k, 3, 3)
+    pfh_target = FPFH(target, r, k, 3, 3)
 
-    for i in range(10):
+    for i in range(3):
         C = get_correspondence(pfh_source, pfh_target)
         R, t = get_transform(C)
         aligned = pfh_source.transform(R, t)
