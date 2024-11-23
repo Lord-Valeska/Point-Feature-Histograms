@@ -7,14 +7,24 @@ from scipy.spatial import KDTree
 from scipy.special import comb
 
 class PFH(object):
-    def __init__(self, pointcloud, radius, num_neighbors=8, div=2, num_features=4):
+    def __init__(self, pointcloud, radius, num_neighbors=8, div=2, num_features=4, filter=False):
         self.pc = pointcloud # (N, 3)
         self.r = radius
         self.nneighbors = num_neighbors
         self.tree = None
-        self.normals = self.get_normals()
+        self.normals, self.curvatures = self.get_normals()
         self.div = div
         self.nfeatures = num_features
+        self.filter = filter
+        if self.filter:
+            self.pc_filtered = self.get_filtered_pc()
+            self.idx_filtered = np.where(self.curvatures > np.percentile(self.curvatures, 50))[0]
+    
+    def get_filtered_idx(self):
+        return self.idx_filtered
+    
+    def get_filter(self):
+        return self.filter
     
     def get_point(self, idx):
         return self.pc[idx]
@@ -31,8 +41,9 @@ class PFH(object):
         X = X - mu
         Q = (X.T @ X) / (n - 1)
         U, sigma, V_T = np.linalg.svd(Q)
+        curvature = sigma[2] / (sigma[0] + sigma[1] + sigma[2])
         normal = V_T.T[:, -1]
-        return normal
+        return normal, curvature
 
     def get_kNNs(self, idx):
         """
@@ -74,19 +85,24 @@ class PFH(object):
         ndarray of normals
         """
         normals = []
+        curvatures = []
         N = self.pc.shape[0]
         mean = np.mean(self.pc, axis=0)
         for i in range(N):
             neighbor_indices = self.get_kNNs(i)
             neighbors = self.pc[neighbor_indices]
-            normal = self.pca_normal(neighbors)
+            normal, curvature = self.pca_normal(neighbors)
             v = mean - self.pc[i]
             v /= np.linalg.norm(v)
             if np.dot(normal, v) > 0:
                 normal *= -1
             normals.append(normal)
-        return np.asarray(normals)
+            curvatures.append(curvature)
+        return np.asarray(normals), np.asarray(curvatures)
     
+    def get_filtered_pc(self):
+        return self.pc[self.curvatures > np.percentile(self.curvatures, 50)]
+
     def get_features(self, idx):
         """
         idx - point index in self.pc
@@ -95,7 +111,7 @@ class PFH(object):
         ndarray of size (self.nneighbors, self.nfeatures).
         """
         neighbor_indices = self.get_kNNs(idx)
-        n_combinations = comb((len(neighbor_indices) + 1), 2)
+        # n_combinations = comb((len(neighbor_indices) + 1), 2)
         combined_list = [idx] + list(neighbor_indices)
         points_idx = np.array(combined_list, dtype=int)
         points_idx_copy = points_idx.copy()
@@ -182,17 +198,25 @@ class PFH(object):
         return result
     
     def get_all_histograms(self):
-        N = self.pc.shape[0]
-        histograms = np.zeros((N, self.div ** self.nfeatures))
-        for i in range(N):
-            histograms[i] = self.get_feature_histogram(i)
+        if not self.filter:
+            N = self.pc.shape[0]
+            histograms = np.zeros((N, self.div ** self.nfeatures))
+            for i in range(N):
+                histograms[i] = self.get_feature_histogram(i)
+        else:
+            N = self.pc_filtered.shape[0]
+            histograms = np.zeros((N, self.div ** self.nfeatures))
+            for i, idx in enumerate(self.idx_filtered):
+                histograms[i] = self.get_feature_histogram(idx)
         return histograms
     
     def transform(self, R, t):
         self.pc = (R @ self.pc.T + t).T
         self.tree = None
-        self.normals = self.get_normals()
+        self.normals, self.curvatures = self.get_normals()
         return self.pc
+
+   
 
 class SPFH(PFH):
     def get_features(self, idx):
@@ -273,6 +297,8 @@ class FPFH(SPFH):
 #         denominator = histogram_target + histogram_p + epsilon
 #         chi_squared_distances = np.sum(numerator / denominator, axis=1)
 #         min_index = np.argmin(chi_squared_distances)
+#         if pfh_target.get_filter():
+#             min_index = pfh_target.get_filtered_idx()[min_index]
 #         q = pfh_target.get_point(min_index)
 #         C.append([p, q])
 #     C = np.asarray(C) # (N, 2, 3)
@@ -308,21 +334,45 @@ def get_correspondence(pfh_source, pfh_target):
     C = {}
     histogram_source = pfh_source.get_all_histograms()
     histogram_target = pfh_target.get_all_histograms()
-    for i in range(pfh_source.get_size()):
-        p = tuple(pfh_source.get_point(i))
-        histogram_p= histogram_source[i]
-        epsilon = 1e-10
-        numerator = (histogram_target - histogram_p) ** 2
-        denominator = histogram_target + histogram_p + epsilon
-        chi_squared_distances = np.sum(numerator / denominator, axis=1)
-        min_dist = np.min(chi_squared_distances)
-        min_index = np.argmin(chi_squared_distances)
-        q = tuple(pfh_target.get_point(min_index))
-        if q in C:
-            if min_dist < C[q][1]:
+    if not pfh_source.get_filter():
+        for i in range(pfh_source.get_size()):
+            p = tuple(pfh_source.get_point(i))
+            histogram_p = histogram_source[i]
+            epsilon = 1e-10
+            numerator = (histogram_target - histogram_p) ** 2
+            denominator = histogram_target + histogram_p + epsilon
+            chi_squared_distances = np.sum(numerator / denominator, axis=1)
+            min_dist = np.min(chi_squared_distances)
+            min_index = np.argmin(chi_squared_distances)
+            if pfh_target.get_filter():
+                filtered_target_idx = pfh_target.get_filtered_idx()
+                min_index = filtered_target_idx[min_index]
+            q = tuple(pfh_target.get_point(min_index))
+            if q in C:
+                if min_dist < C[q][1]:
+                    C[q] = [p, min_dist]
+            else:
                 C[q] = [p, min_dist]
-        else:
-            C[q] = [p, min_dist]
+    else:
+        filtered_source_idx = pfh_source.get_filtered_idx()
+        for i, idx in enumerate(filtered_source_idx):
+            p = tuple(pfh_source.get_point(idx))
+            histogram_p = histogram_source[i]
+            epsilon = 1e-10
+            numerator = (histogram_target - histogram_p) ** 2
+            denominator = histogram_target + histogram_p + epsilon
+            chi_squared_distances = np.sum(numerator / denominator, axis=1)
+            min_dist = np.min(chi_squared_distances)
+            min_index = np.argmin(chi_squared_distances)
+            if pfh_target.get_filter():
+                filtered_target_idx = pfh_target.get_filtered_idx()
+                min_index = filtered_target_idx[min_index]
+            q = tuple(pfh_target.get_point(min_index))
+            if q in C:
+                if min_dist < C[q][1]:
+                    C[q] = [p, min_dist]
+            else:
+                C[q] = [p, min_dist]
     return C
 
 def get_transform(C):
