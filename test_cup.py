@@ -3,6 +3,7 @@ import utils
 import numpy
 import matplotlib.pyplot as plt
 import numpy as np
+import time
 
 from pfh import PFH, SPFH, FPFH, get_correspondence, get_transform, get_error
 
@@ -20,7 +21,7 @@ if __name__ == '__main__':
     # pc_target = np.concatenate((pc_target_1, pc_target_2))
 
     # # Test for noisy pc
-    # pc_target = utils.add_outliers(pc_target, 2, 0.002)
+    pc_target = utils.add_outliers(pc_target, 2, 0.002)
 
     # Convert point clouds into matrix
     P = utils.convert_pc_to_matrix(pc_source)
@@ -31,12 +32,12 @@ if __name__ == '__main__':
     target = np.asarray(Q).T
 
     # Test for kNNs
-    k = 8
-    r = 0.03
-    pfh_source = PFH(source, r, k, 2, 4)
-    neighbor_indices = pfh_source.get_kNNs(216)
-    neighbors = source[neighbor_indices]
-    pc_neighbors = utils.convert_matrix_to_pc(np.matrix(neighbors.T))
+    # k = 8
+    # r = 0.03
+    # pfh_source = PFH(source, r, k, 2, 4)
+    # neighbor_indices = pfh_source.get_kNNs(216)
+    # neighbors = source[neighbor_indices]
+    # pc_neighbors = utils.convert_matrix_to_pc(np.matrix(neighbors.T))
 
     fig = utils.view_pc([pc_source, pc_target], None, ['b', 'r'], ['^', 'o'])
 
@@ -45,7 +46,7 @@ if __name__ == '__main__':
     # for i in range(len(normals)):
     #     utils.draw_vector(fig, normals[i].squeeze(), P[:, i], color='y')
 
-    plt.axis([-0.15, 0.15, -0.15, 0.15, -0.1, 0.1])
+    plt.axis([-0.15, 0.15, -0.15, 0.15])
     plt.show()
 
     # Test for calculating features for a point
@@ -66,25 +67,29 @@ if __name__ == '__main__':
     # plt.show()
 
     # Test for getting correspondence
-    threshold=0.001
+    threshold = 0.001
     k = 8
     r = 0.03
-    pfh_source = FPFH(source, r, k, 2, 3)
-    pfh_target = FPFH(target, r, k, 2, 3)
+    pfh_source = FPFH(source, r, k, 2, 3, 25)
+    pfh_target = FPFH(target, r, k, 2, 3, 25)
 
-    for i in range(3):
+    for i in range(5):
+        current = time.time()
         C = get_correspondence(pfh_source, pfh_target)
         R, t = get_transform(C)
         aligned = pfh_source.transform(R, t)
+        end = time.time()
+        print(f"Iteration time: {end - current}")
         error = get_error(C, R, t)
         print(error)
         if error < threshold:
             break
+        
     
     
     pc_aligned = utils.convert_matrix_to_pc(np.matrix(aligned.T))
     utils.view_pc([pc_aligned, pc_target], None, ['b', 'r'], ['o', '^'])
-    plt.axis([-0.15, 0.15, -0.15, 0.15, -0.1, 0.1])
+    plt.axis([-0.15, 0.15, -0.15, 0.15])
     plt.show()
 
     
