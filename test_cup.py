@@ -46,7 +46,8 @@ if __name__ == '__main__':
     # for i in range(len(normals)):
     #     utils.draw_vector(fig, normals[i].squeeze(), P[:, i], color='y')
 
-    plt.axis([-0.15, 0.15, -0.15, 0.15])
+    # plt.axis([-0.15, 0.15, -0.15, 0.15])
+    plt.axis([-0.15, 0.15, -0.15, 0.15, -0.15, 0.15])
     plt.show()
 
     # Test for calculating features for a point
