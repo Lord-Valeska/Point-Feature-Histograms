@@ -90,7 +90,7 @@ if __name__ == '__main__':
     
     pc_aligned = utils.convert_matrix_to_pc(np.matrix(aligned.T))
     utils.view_pc([pc_aligned, pc_target], None, ['b', 'r'], ['o', '^'])
-    plt.axis([-0.15, 0.15, -0.15, 0.15])
+    plt.axis([-0.15, 0.15, -0.15, 0.15, -0.15, 0.15])
     plt.show()
 
     

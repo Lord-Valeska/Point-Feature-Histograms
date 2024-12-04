@@ -31,9 +31,9 @@ def getError(C, R, t):
     errors = (((R @ Cp.T).T + t.reshape(1, 3)) - Cq) ** 2
     return np.sum(errors)
 
-def main(threshold=0.016, target_name='cloud_icp_target0.csv'):
+def main(threshold=0.016, target_name='./data/cloud_icp_target0.csv'):
     #Import the cloud
-    pc_source = utils.load_pc('cloud_icp_source.csv')
+    pc_source = utils.load_pc('./data/cloud_icp_source.csv')
 
     ###YOUR CODE HERE###
     pc_target = utils.load_pc(target_name) # Change this to load in a different target
@@ -68,7 +68,7 @@ def main(threshold=0.016, target_name='cloud_icp_target0.csv'):
     plt.plot(error_list)
     plt.title("Error vs Iteration")
     utils.view_pc([pc_aligned, pc_target], None, ['b', 'r'], ['o', '^'])
-    plt.axis([-0.15, 0.15, -0.15, 0.15])
+    plt.axis([-0.15, 0.15, -0.15, 0.15, -0.15, 0.15])
     ###YOUR CODE HERE###
 
     plt.show()
@@ -76,8 +76,8 @@ def main(threshold=0.016, target_name='cloud_icp_target0.csv'):
 
 
 if __name__ == '__main__':
-    main(threshold=0.016, target_name='cloud_icp_target0.csv')
-    main(threshold=0.00001, target_name='cloud_icp_target1.csv')
-    main(threshold=0.00808555, target_name='cloud_icp_target2.csv')
-    main(threshold=0.04186485, target_name='cloud_icp_target3.csv')
+    main(threshold=0.016, target_name='./data/cloud_icp_target0.csv')
+    main(threshold=0.00001, target_name='./data/cloud_icp_target1.csv')
+    main(threshold=0.00808555, target_name='./data/cloud_icp_target2.csv')
+    main(threshold=0.04186485, target_name='./data/cloud_icp_target3.csv')
 
