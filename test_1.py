@@ -69,7 +69,7 @@ if __name__ == '__main__':
     P_target = target_points.T  # Shape (N, 3)
 
     # Set parameters for ICP
-    threshold = 0.0001
+    threshold = 0.001
     k = 8
     r = 0.03
 
