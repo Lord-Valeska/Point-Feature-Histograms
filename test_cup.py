@@ -8,6 +8,10 @@ import time
 from pfh import PFH, SPFH, FPFH, get_pfh_correspondence, get_transform, get_error, get_correspondence
 
 if __name__ == '__main__':
+    # user
+    user = input("Enter the user (valeska / chenzj): ")
+    print("Welcome, " + user + "!")
+
     # Load point clouds
     print("Loading point clouds ......")
     pc_source = utils.load_pc('data/cloud_icp_source.csv')
@@ -47,7 +51,10 @@ if __name__ == '__main__':
     # for i in range(len(normals)):
     #     utils.draw_vector(fig, normals[i].squeeze(), P[:, i], color='y')
 
-    plt.axis([-0.15, 0.15, -0.15, 0.15])
+    if user == 'chenzj':
+        plt.axis([-0.15, 0.15, -0.15, 0.15, -0.15, 0.15])
+    else:
+        plt.axis([-0.15, 0.15, -0.15, 0.15])
     # plt.axis([-0.15, 0.15, -0.15, 0.15, -0.15, 0.15])
     plt.show()
 
@@ -84,7 +91,10 @@ if __name__ == '__main__':
     print(f"Iteration time: {end - current}")
     pc_aligned = utils.convert_matrix_to_pc(np.matrix(aligned.T))
     utils.view_pc([pc_aligned, pc_target], None, ['b', 'r'], ['o', '^'])
-    plt.axis([-0.15, 0.15, -0.15, 0.15])
+    if user == 'chenzj':
+        plt.axis([-0.15, 0.15, -0.15, 0.15, -0.15, 0.15])
+    else:
+        plt.axis([-0.15, 0.15, -0.15, 0.15])
     
     # Standard ICP
     for i in range(50):
@@ -101,7 +111,10 @@ if __name__ == '__main__':
         
     pc_aligned = utils.convert_matrix_to_pc(np.matrix(aligned.T))
     utils.view_pc([pc_aligned, pc_target], None, ['b', 'r'], ['o', '^'])
-    plt.axis([-0.15, 0.15, -0.15, 0.15])
+    if user == 'chenzj':
+        plt.axis([-0.15, 0.15, -0.15, 0.15, -0.15, 0.15])
+    else:
+        plt.axis([-0.15, 0.15, -0.15, 0.15])
     plt.show()
 
     

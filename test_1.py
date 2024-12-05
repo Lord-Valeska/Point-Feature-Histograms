@@ -23,6 +23,10 @@ def rotation_matrix(axis, theta):
     return R
 
 if __name__ == '__main__':
+    # user
+    user = input("Enter the user (valeska / chenzj): ")
+    print("Welcome, " + user + "!")
+
     # Load the bunny mesh and sample points to create the source point cloud
     print("Loading bunny mesh and sampling points...")
     source_mesh = o3d.io.read_triangle_mesh("data/bun_zipper.ply")
@@ -52,7 +56,10 @@ if __name__ == '__main__':
 
     # Visualize the source and target point clouds
     utils.view_pc([source_pc, target_pc], None, ['b', 'r'], ['o', '^'])
-    plt.axis([-0.15, 0.15, 0., 0.15])
+    if user == 'chenzj':
+        plt.axis([-0.15, 0.15, -0.15, 0.15, -0.15, 0.15])
+    else:
+        plt.axis([-0.15, 0.15, -0.15, 0.15])
     plt.show()
 
     # Prepare the point clouds for ICP
@@ -62,7 +69,7 @@ if __name__ == '__main__':
     P_target = target_points.T  # Shape (N, 3)
 
     # Set parameters for ICP
-    threshold = 0.001
+    threshold = 0.0001
     k = 8
     r = 0.03
 
@@ -79,7 +86,10 @@ if __name__ == '__main__':
     print(f"Iteration time: {end - current}")
     pc_aligned = utils.convert_matrix_to_pc(np.matrix(aligned.T))
     utils.view_pc([pc_aligned, target_pc], None, ['b', 'r'], ['o', '^'])
-    plt.axis([-0.15, 0.15, -0.15, 0.15])
+    if user == 'chenzj':
+        plt.axis([-0.15, 0.15, -0.15, 0.15, -0.15, 0.15])
+    else:
+        plt.axis([-0.15, 0.15, -0.15, 0.15])
     plt.show()
     
     # Perform ICP iterations
@@ -101,7 +111,10 @@ if __name__ == '__main__':
 
     # Visualize the aligned source point cloud and the target point cloud
     utils.view_pc([pc_aligned, target_pc], None, ['b', 'r'], ['o', '^'])
-    plt.axis([-0.15, 0.15, -0.15, 0.15])
+    if user == 'chenzj':
+        plt.axis([-0.15, 0.15, -0.15, 0.15, -0.15, 0.15])
+    else:
+        plt.axis([-0.15, 0.15, -0.15, 0.15])
     plt.show()
 
     # Compare the estimated transformation with the true transformation
