@@ -202,6 +202,26 @@ class PFH(object):
                 result = 1
             else:
                 result = 2
+        elif self.div == 4:
+            if fi < si[0]:
+                result = 0
+            elif fi >= si[0] and fi < si[1]:
+                result = 1
+            elif fi >= si[1] and fi < si[2]:
+                result = 2
+            else:
+                result = 3
+        elif self.div == 5:
+            if fi < si[0]:
+                result = 0
+            elif fi >= si[0] and fi < si[1]:
+                result = 1
+            elif fi >= si[1] and fi < si[2]:
+                result = 2
+            elif fi >= si[2] and fi < si[3]:
+                result = 3
+            else:
+                result = 4
         return result
     
     def get_all_histograms(self):
@@ -334,7 +354,7 @@ class FPFH(SPFH):
 #     return np.sum(errors)
 
 # New version for missing points
-def get_correspondence(pfh_source, pfh_target):
+def get_pfh_correspondence(pfh_source, pfh_target):
     C = {}
     histogram_source = pfh_source.get_all_histograms()
     histogram_target = pfh_target.get_all_histograms()
@@ -378,6 +398,32 @@ def get_correspondence(pfh_source, pfh_target):
                 C[q] = [p, min_dist]
     return C
 
+def get_correspondence(pfh_source, pfh_target):
+    num_source = pfh_source.get_size()
+    num_target = pfh_target.get_size()
+    C = {}
+    Q = pfh_target.get_all_points()
+    for i in range(num_source):
+        p = tuple(pfh_source.get_point(i))
+        tree = KDTree(Q)
+        distance, idx = tree.query(p)
+        q = tuple(Q[idx])
+        if q in C:
+            if distance < C[q][1]:
+                C[q] = [p, distance]
+        else:
+            C[q] = [p, distance]
+    # C = []
+    # P = pfh_source.get_all_points()
+    # Q = pfh_target.get_all_points()
+    # for i in range(num_source):
+    #     p = P[i]
+    #     distances = np.linalg.norm(Q - p, axis=0)
+    #     q = Q[np.argmin(distances)]
+    #     C.append([p, q])
+    # C = np.asarray(C).squeeze()
+    return C
+    
 def get_transform(C):
     # Step 0
     Cp, Cq = get_pq(C)
@@ -402,11 +448,16 @@ def get_error(C, R, t):
     return np.sum(errors)
 
 def get_pq(C):
-    Cq = []
-    Cp = []
-    for key in C:
-        Cq.append(key)
-        Cp.append(C[key][0])
-    Cq = np.asarray(Cq)
-    Cp = np.asarray(Cp)
+    if isinstance(C, dict):
+        Cq = []
+        Cp = []
+        for key in C:
+            Cq.append(key)
+            Cp.append(C[key][0])
+        Cq = np.asarray(Cq)
+        Cp = np.asarray(Cp)
+    elif isinstance(C, np.ndarray):
+        Cp = C[:, 0, :] # (495, 3)
+        Cq = C[:, 1, :] # (495, 3)
+    
     return Cp, Cq

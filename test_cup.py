@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 
-from pfh import PFH, SPFH, FPFH, get_correspondence, get_transform, get_error
+from pfh import PFH, SPFH, FPFH, get_pfh_correspondence, get_transform, get_error, get_correspondence
 
 if __name__ == '__main__':
     # Load point clouds
@@ -15,13 +15,14 @@ if __name__ == '__main__':
     print("Loaded")
 
     # # Test for missing points
-    # pc_target = pc_target[150:]
+    # pc_source = pc_source[:400]
+    # pc_target = pc_target[50:]
     # pc_target_1 = pc_target[300:]
     # pc_target_2 = pc_target[:150]
     # pc_target = np.concatenate((pc_target_1, pc_target_2))
 
     # # Test for noisy pc
-    pc_target = utils.add_outliers(pc_target, 2, 0.002)
+    pc_target = utils.add_noise(pc_target, 0.001)
 
     # Convert point clouds into matrix
     P = utils.convert_pc_to_matrix(pc_source)
@@ -46,8 +47,8 @@ if __name__ == '__main__':
     # for i in range(len(normals)):
     #     utils.draw_vector(fig, normals[i].squeeze(), P[:, i], color='y')
 
-    # plt.axis([-0.15, 0.15, -0.15, 0.15])
-    plt.axis([-0.15, 0.15, -0.15, 0.15, -0.15, 0.15])
+    plt.axis([-0.15, 0.15, -0.15, 0.15])
+    # plt.axis([-0.15, 0.15, -0.15, 0.15, -0.15, 0.15])
     plt.show()
 
     # Test for calculating features for a point
@@ -71,10 +72,22 @@ if __name__ == '__main__':
     threshold = 0.001
     k = 8
     r = 0.03
-    pfh_source = FPFH(source, r, k, 2, 3, 25)
-    pfh_target = FPFH(target, r, k, 2, 3, 25)
+    pfh_source = FPFH(source, r, k, 3, 3, 0)
+    pfh_target = FPFH(target, r, k, 3, 3, 0)
 
-    for i in range(5):
+    # Initial transform
+    current = time.time()
+    C = get_pfh_correspondence(pfh_source, pfh_target)
+    R, t = get_transform(C)
+    aligned = pfh_source.transform(R, t)
+    end = time.time()
+    print(f"Iteration time: {end - current}")
+    pc_aligned = utils.convert_matrix_to_pc(np.matrix(aligned.T))
+    utils.view_pc([pc_aligned, pc_target], None, ['b', 'r'], ['o', '^'])
+    plt.axis([-0.15, 0.15, -0.15, 0.15])
+    
+    # Standard ICP
+    for i in range(50):
         current = time.time()
         C = get_correspondence(pfh_source, pfh_target)
         R, t = get_transform(C)
@@ -86,11 +99,9 @@ if __name__ == '__main__':
         if error < threshold:
             break
         
-    
-    
     pc_aligned = utils.convert_matrix_to_pc(np.matrix(aligned.T))
     utils.view_pc([pc_aligned, pc_target], None, ['b', 'r'], ['o', '^'])
-    plt.axis([-0.15, 0.15, -0.15, 0.15, -0.15, 0.15])
+    plt.axis([-0.15, 0.15, -0.15, 0.15])
     plt.show()
 
     

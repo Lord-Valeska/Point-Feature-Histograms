@@ -18,5 +18,5 @@ if __name__ == '__main__':
     source_matrix = np.matrix(source_pcd.points)
     source_pc = utils.convert_matrix_to_pc(source_matrix.T)
     utils.view_pc([source_pc], None, ['b'], ['o'])
-    plt.axis([-0.15, 0.15, -0.15, 0.15, -0.1, 0.1])
+    plt.axis([-0.15, 0.15, -0.15, 0.15])
     plt.show()
