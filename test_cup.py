@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 
-from pfh import PFH, SPFH, FPFH, get_pfh_correspondence, get_transform, get_error, get_correspondence
+from pfh import PFH, SPFH, FPFH, get_pfh_correspondence, get_transform, get_error, get_correspondence, \
+    get_chamfer_error
 
 if __name__ == '__main__':
     # user
@@ -76,11 +77,13 @@ if __name__ == '__main__':
     # plt.show()
 
     # Test for getting correspondence
-    threshold = 0.001
+    threshold = 1e-5
     k = 8
     r = 0.03
-    pfh_source = FPFH(source, r, k, 3, 3, 0)
-    pfh_target = FPFH(target, r, k, 3, 3, 0)
+    pfh_source = FPFH(source, r, k, 2, 3, 0)
+    pfh_target = FPFH(target, r, k, 2, 3, 0)
+    
+    errors = []
 
     # Initial transform
     current = time.time()
@@ -90,6 +93,9 @@ if __name__ == '__main__':
     end = time.time()
     print(f"Iteration time: {end - current}")
     pc_aligned = utils.convert_matrix_to_pc(np.matrix(aligned.T))
+    error = get_error(C, R, t)
+    errors.append(error)
+    print(error)
     utils.view_pc([pc_aligned, pc_target], None, ['b', 'r'], ['o', '^'])
     if user == 'chenzj':
         plt.axis([-0.15, 0.15, -0.15, 0.15, -0.15, 0.15])
@@ -105,9 +111,13 @@ if __name__ == '__main__':
         end = time.time()
         print(f"Iteration time: {end - current}")
         error = get_error(C, R, t)
+        errors.append(error)
         print(error)
-        if error < threshold:
-            break
+        if len(errors) > 1:
+            relative_change = abs(errors[-1] - errors[-2]) / errors[-2]
+            if relative_change < threshold or error <= threshold:
+                print(f"Converged at iteration {i} with relative change {relative_change:.6f}")
+                break
         
     pc_aligned = utils.convert_matrix_to_pc(np.matrix(aligned.T))
     utils.view_pc([pc_aligned, pc_target], None, ['b', 'r'], ['o', '^'])
@@ -115,6 +125,14 @@ if __name__ == '__main__':
         plt.axis([-0.15, 0.15, -0.15, 0.15, -0.15, 0.15])
     else:
         plt.axis([-0.15, 0.15, -0.15, 0.15])
+        
+    plt.figure(figsize=(8, 6))
+    plt.plot(range(len(errors)), errors, marker='o', linestyle='-', color='blue')
+    plt.title("Error vs. Iteration", fontsize=16)
+    plt.xlabel("Iteration", fontsize=14)
+    plt.ylabel("Error", fontsize=14)
+    plt.grid(alpha=0.3)
+    
     plt.show()
 
     

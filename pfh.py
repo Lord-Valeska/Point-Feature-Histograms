@@ -445,7 +445,20 @@ def get_transform(C):
 def get_error(C, R, t):
     Cp, Cq = get_pq(C)
     errors = (((R @ Cp.T).T + t.reshape(1, 3)) - Cq) ** 2
-    return np.sum(errors)
+    return np.mean(errors)
+
+def get_chamfer_error(pfh1, pfh2):
+    pc1 = pfh1.get_all_points()
+    pc2 = pfh2.get_all_points()
+    
+    kd_tree_1 = KDTree(pc1)
+    kd_tree_2 = KDTree(pc2)
+    
+    distances_1_to_2, _ = kd_tree_1.query(pc2)
+    distances_2_to_1, _ = kd_tree_2.query(pc1)
+    
+    chamfer_dist = np.mean(distances_1_to_2**2) + np.mean(distances_2_to_1**2)
+    return chamfer_dist
 
 def get_pq(C):
     if isinstance(C, dict):

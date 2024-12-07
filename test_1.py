@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 import open3d as o3d
 import time
 
-from pfh import PFH, SPFH, FPFH, get_pfh_correspondence, get_transform, get_error, get_correspondence
+from pfh import PFH, SPFH, FPFH, get_pfh_correspondence, get_transform, get_error, get_correspondence, \
+    get_chamfer_error
 
 def rotation_matrix(axis, theta):
     """
@@ -42,17 +43,17 @@ if __name__ == '__main__':
     target_points = R_true @ source_points + t_true
 
     # Add Gaussian noise to the target point cloud
-    # noise_level = 0.0
-    # noise = np.random.normal(0, noise_level, target_points.shape)
-    # target_points = target_points + noise
+    noise_level = 0.001
+    noise = np.random.normal(0, noise_level, target_points.shape)
+    target_points = target_points + noise
 
     # Convert the point clouds to the required format
     source_pc = utils.convert_matrix_to_pc(np.matrix(source_points))
     target_pc = utils.convert_matrix_to_pc(np.matrix(target_points))
     
     # Test for missing points
-    target_pc = target_pc[:700]
-    source_pc = source_pc[300:]
+    # target_pc = target_pc[:700]
+    # source_pc = source_pc[300:]
 
     # Visualize the source and target point clouds
     utils.view_pc([source_pc, target_pc], None, ['b', 'r'], ['o', '^'])
@@ -69,13 +70,14 @@ if __name__ == '__main__':
     P_target = target_points.T  # Shape (N, 3)
 
     # Set parameters for ICP
-    threshold = 0.001
+    threshold = 1e-5
     k = 8
     r = 0.03
 
     # Initialize FPFH features for source and target
     pfh_source = FPFH(P_source, r, k, 2, 3, 0)
     pfh_target = FPFH(P_target, r, k, 2, 3, 0)
+    errors = []
 
     # Initial transform
     current = time.time()
@@ -84,6 +86,8 @@ if __name__ == '__main__':
     aligned = pfh_source.transform(R, t)
     end = time.time()
     print(f"Iteration time: {end - current}")
+    error = get_error(C, R, t)  # Compute alignment error
+    errors.append(error)
     pc_aligned = utils.convert_matrix_to_pc(np.matrix(aligned.T))
     utils.view_pc([pc_aligned, target_pc], None, ['b', 'r'], ['o', '^'])
     if user == 'chenzj':
@@ -100,11 +104,14 @@ if __name__ == '__main__':
         aligned = pfh_source.transform(R_est, t_est)  # Apply transformation
         end = time.time()
         print(f"Iteration {i+1}, time: {end - current:.4f}s")
-        error = get_error(C, R_est, t_est)  # Compute alignment error
+        error = get_error(C, R, t)  # Compute alignment error
+        errors.append(error)
         print(f"Alignment error: {error:.6f}")
-        if error < threshold:
-            print("Converged.")
-            break
+        if len(errors) > 1:
+            relative_change = abs(errors[-1] - errors[-2]) / errors[-2]
+            if relative_change < threshold or error < threshold:
+                print(f"Converged at iteration {i} with relative change {relative_change:.6f}")
+                break
 
     # Convert the aligned point cloud to the required format
     pc_aligned = utils.convert_matrix_to_pc(np.matrix(aligned.T))
@@ -115,6 +122,14 @@ if __name__ == '__main__':
         plt.axis([-0.15, 0.15, -0.15, 0.15, -0.15, 0.15])
     else:
         plt.axis([-0.15, 0.15, -0.15, 0.15])
+        
+    plt.figure(figsize=(8, 6))
+    plt.plot(range(len(errors)), errors, marker='o', linestyle='-', color='blue')
+    plt.title("Error vs. Iteration", fontsize=16)
+    plt.xlabel("Iteration", fontsize=14)
+    plt.ylabel("Error", fontsize=14)
+    plt.grid(alpha=0.3)
+    
     plt.show()
 
     # Compare the estimated transformation with the true transformation
