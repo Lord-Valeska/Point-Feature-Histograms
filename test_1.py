@@ -63,20 +63,24 @@ if __name__ == '__main__':
         plt.axis([-0.15, 0.15, -0.15, 0.15])
     plt.show()
 
-    # Prepare the point clouds for ICP
+
+
+    # --- PFH --- #
+
+    # Prepare the point clouds for PFH
     target_points = np.asarray(utils.convert_pc_to_matrix(target_pc))
     source_points = np.asarray(utils.convert_pc_to_matrix(source_pc))
     P_source = source_points.T  # Shape (N, 3)
     P_target = target_points.T  # Shape (N, 3)
 
-    # Set parameters for ICP
-    threshold = 1e-5
-    k = 8
-    r = 0.03
+    # Set parameters for PFH
+    threshold = 1e-5 # no
+    k = 8            # changeable # TODO
+    r = 0.03         # changeable # TODO
 
     # Initialize FPFH features for source and target
-    pfh_source = FPFH(P_source, r, k, 2, 3, 0)
-    pfh_target = FPFH(P_target, r, k, 2, 3, 0)
+    pfh_source = FPFH(P_source, r, k, 2, 3, 0) # 2(bin), 0(percentile) changeable # TODO
+    pfh_target = FPFH(P_target, r, k, 2, 3, 0) # 2(bin), 0(percentile) changeable # TODO
     errors = []
 
     # Initial transform

@@ -82,7 +82,7 @@ def view_pc(pcs, fig=None, color='b', marker='o'):
             y.append(pt[1, 0])
             z.append(pt[2, 0])
 
-        ax.scatter3D(x, y, z, color=c, marker=m)
+        ax.scatter3D(x, y, z, color=c, marker=m, s=1)
 
     # Set the labels
     ax.set_xlabel('X')
@@ -296,3 +296,18 @@ def convert_matrix_to_pc(numpy_pc):
         pc.append((numpy_pc[0:3,i]))
 
     return pc
+
+def rotation_matrix(axis, theta):
+    """
+    Return the rotation matrix for rotation about the given axis by theta radians.
+    """
+    axis = axis / numpy.linalg.norm(axis)
+    cos_theta = numpy.cos(theta)
+    sin_theta = numpy.sin(theta)
+    u_x, u_y, u_z = axis
+    R = numpy.array([
+        [cos_theta + u_x**2*(1 - cos_theta),       u_x*u_y*(1 - cos_theta) - u_z*sin_theta, u_x*u_z*(1 - cos_theta) + u_y*sin_theta],
+        [u_y*u_x*(1 - cos_theta) + u_z*sin_theta,  cos_theta + u_y**2*(1 - cos_theta),      u_y*u_z*(1 - cos_theta) - u_x*sin_theta],
+        [u_z*u_x*(1 - cos_theta) - u_y*sin_theta,  u_z*u_y*(1 - cos_theta) + u_x*sin_theta, cos_theta + u_z**2*(1 - cos_theta)]
+    ])
+    return R

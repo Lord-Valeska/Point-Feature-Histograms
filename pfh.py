@@ -8,6 +8,7 @@ from scipy.spatial import KDTree
 class PFH(object):
     def __init__(self, pointcloud, radius, num_neighbors=8, div=2, num_features=4, percentile=0):
         self.pc = pointcloud # (N, 3)
+        self.pc_neighbored_idx = []
         self.r = radius
         self.nneighbors = num_neighbors
         self.tree = None
@@ -64,8 +65,7 @@ class PFH(object):
         idx_within_radius = self.tree.query_ball_point(point, r=self.r)
         # Exclude the point itself
         idx_within_radius = [i for i in idx_within_radius if i != idx]
-    
-        if idx_within_radius is not None:
+        if len(idx_within_radius) != 0:
             if len(idx_within_radius) > self.nneighbors:
                 points_within_radius = self.pc[idx_within_radius]
                 tree_within_radius = KDTree(points_within_radius)
@@ -76,7 +76,7 @@ class PFH(object):
             # print(f"{idx}: {self.nneighbors}-neighborhood within radius {self.r}: {neighbor_indices}")
             return np.asarray(neighbor_indices)
         else:
-            print("No points within radius")
+            # print("No points within radius around Point [", idx, "]")
             return None
         
     def get_normals(self):
@@ -88,22 +88,32 @@ class PFH(object):
         """
         normals = []
         curvatures = []
-        N = self.pc.shape[0]
+        print("pc.shape before get_normals: ", self.pc.shape[0])
         mean = np.mean(self.pc, axis=0)
+        N = self.pc.shape[0]
         for i in range(N):
             neighbor_indices = self.get_kNNs(i)
-            neighbors = self.pc[neighbor_indices]
-            normal, curvature = self.pca_normal(neighbors)
-            v = mean - self.pc[i]
-            v /= np.linalg.norm(v)
-            if np.dot(normal, v) > 0:
-                normal *= -1
-            normals.append(normal)
-            curvatures.append(curvature)
+            if neighbor_indices is not None and len(neighbor_indices) >= 8:
+                neighbors = self.pc[neighbor_indices]
+                normal, curvature = self.pca_normal(neighbors)
+                # print(normal, curvature)
+                v = mean - self.pc[i]
+                v /= np.linalg.norm(v)
+                if np.dot(normal, v) > 0:
+                    normal *= -1
+                normals.append(normal)
+                curvatures.append(curvature)
+                self.pc_neighbored_idx.append(i)
+            else:
+                normals.append(np.array([0, 0, 0]))
+                curvatures.append(0)
+                continue
+        print("pc.shape after get_normals: ", len(self.pc_neighbored_idx))
         return np.asarray(normals), np.asarray(curvatures)
     
     def get_categorized_idx(self):
-        all_indices = np.arange(len(self.pc))
+        # all_indices = np.arange(len(self.pc)) # HERE
+        all_indices = np.array(self.pc_neighbored_idx)
         if self.percentile == 0:
             self.idx_featured = all_indices
             self.idx_regular = np.array([])
@@ -119,43 +129,47 @@ class PFH(object):
         ndarray of size (self.nneighbors, self.nfeatures).
         """
         neighbor_indices = self.get_kNNs(idx)
-        combined_list = [idx] + list(neighbor_indices)
-        points_idx = np.array(combined_list, dtype=int)
-        points_idx_copy = points_idx.copy()
         features = []
-        for i_idx in points_idx:
-            p_i = self.pc[i_idx]
-            n_i = self.normals[i_idx]
-            points_idx_copy = points_idx_copy[1:]
-            for j_idx in points_idx_copy:
-                p_j = self.pc[j_idx]
-                n_j = self.normals[j_idx]
-                if np.arccos(np.dot(n_i, p_j - p_i)) <= np.arccos(np.dot(n_j, p_i - p_j)):
-                    source_idx = i_idx
-                    source_point = p_i
-                    target_idx = j_idx
-                    target_point = p_j
-                else:
-                    source_idx = j_idx
-                    source_point = p_j
-                    target_idx = i_idx
-                    target_point = p_i
-                d = np.linalg.norm(target_point - source_point)
-                # Construct the Darboux frame
-                u = self.normals[source_idx]
-                v = np.cross((target_point - source_point), u)
-                w = np.cross(u, v)
-                # Construct the four features (including the distance)
-                nt = self.normals[target_idx]
-                f1 = np.dot(v, nt)
-                f2 = d
-                f3 = np.dot(u, (target_point - source_point) / d)
-                f4 = np.arctan(np.dot(w, nt) / np.dot(u, nt))
-                if self.nfeatures == 4:
-                    features.append(np.array([f1, f2, f3, f4]))
-                elif self.nfeatures == 3:
-                    features.append(np.array([f1, f3, f4]))
-        features = np.asarray(features)
+        if neighbor_indices is not None:
+            combined_list = [idx] + list(neighbor_indices)
+            points_idx = np.array(combined_list, dtype=int)
+            points_idx_copy = points_idx.copy()
+            for i_idx in points_idx:
+                p_i = self.pc[i_idx]
+                n_i = self.normals[i_idx]
+                points_idx_copy = points_idx_copy[1:]
+                for j_idx in points_idx_copy:
+                    p_j = self.pc[j_idx]
+                    n_j = self.normals[j_idx]
+                    if np.dot(n_i, p_j - p_i) > np.dot(n_j, p_i - p_j):
+                        source_idx = i_idx
+                        source_point = p_i
+                        target_idx = j_idx
+                        target_point = p_j
+                    else:
+                        source_idx = j_idx
+                        source_point = p_j
+                        target_idx = i_idx
+                        target_point = p_i
+                    d = np.linalg.norm(target_point - source_point)
+                    # Construct the Darboux frame
+                    u = self.normals[source_idx]
+                    v = np.cross((target_point - source_point), u)
+                    w = np.cross(u, v)
+                    # Construct the four features (including the distance)
+                    nt = self.normals[target_idx]
+                    f1 = np.dot(v, nt)
+                    f2 = d
+                    f3 = np.dot(u, (target_point - source_point) / d)
+                    if np.dot(u,nt) == 0:
+                        f4 = np.pi/2
+                    else:
+                        f4 = np.arctan(np.dot(w, nt) / np.dot(u, nt))
+                    if self.nfeatures == 4:
+                        features.append(np.array([f1, f2, f3, f4]))
+                    elif self.nfeatures == 3:
+                        features.append(np.array([f1, f3, f4]))
+            features = np.asarray(features)
         return features
 
     def get_feature_histogram(self, idx):
@@ -163,7 +177,7 @@ class PFH(object):
         Implemented 2 div, inclduing d in the feature.
         Try 3 div without distance.
         """
-        features = self.get_features(idx)
+        features = np.array(self.get_features(idx))
         r = 0
         if self.nfeatures == 4:
             r = np.median(features[:, 1])
@@ -250,38 +264,42 @@ class SPFH(PFH):
         """
         neighbor_indices = self.get_kNNs(idx)
         features = []
-        i_idx = idx
-        p_i = self.pc[i_idx]
-        n_i = self.normals[i_idx]
-        for j_idx in neighbor_indices:
-            p_j = self.pc[j_idx]
-            n_j = self.normals[j_idx]
-            if np.arccos(np.dot(n_i, p_j - p_i)) <= np.arccos(np.dot(n_j, p_i - p_j)):
-                source_idx = i_idx
-                source_point = p_i
-                target_idx = j_idx
-                target_point = p_j
-            else:
-                source_idx = j_idx
-                source_point = p_j
-                target_idx = i_idx
-                target_point = p_i
-            d = np.linalg.norm(target_point - source_point)
-            # Construct the Darboux frame
-            u = self.normals[source_idx]
-            v = np.cross((target_point - source_point), u)
-            w = np.cross(u, v)
-            # Construct the four features (including the distance)
-            nt = self.normals[target_idx]
-            f1 = np.dot(v, nt)
-            f2 = d
-            f3 = np.dot(u, (target_point - source_point) / d)
-            f4 = np.arctan(np.dot(w, nt) / np.dot(u, nt))
-            if self.nfeatures == 4:
-                features.append(np.array([f1, f2, f3, f4]))
-            elif self.nfeatures == 3:
-                features.append(np.array([f1, f3, f4]))
-        features = np.asarray(features)
+        if neighbor_indices is not None:
+            i_idx = idx
+            p_i = self.pc[i_idx]
+            n_i = self.normals[i_idx]
+            for j_idx in neighbor_indices:
+                p_j = self.pc[j_idx]
+                n_j = self.normals[j_idx]
+                if np.dot(n_i, p_j - p_i) > np.dot(n_j, p_i - p_j):
+                    source_idx = i_idx
+                    source_point = p_i
+                    target_idx = j_idx
+                    target_point = p_j
+                else:
+                    source_idx = j_idx
+                    source_point = p_j
+                    target_idx = i_idx
+                    target_point = p_i
+                d = np.linalg.norm(target_point - source_point)
+                # Construct the Darboux frame
+                u = self.normals[source_idx]
+                v = np.cross((target_point - source_point), u)
+                w = np.cross(u, v)
+                # Construct the four features (including the distance)
+                nt = self.normals[target_idx]
+                f1 = np.dot(v, nt)
+                f2 = d
+                f3 = np.dot(u, (target_point - source_point) / d)
+                if np.dot(u, nt) == 0:
+                    f4 = np.pi/2
+                else:
+                    f4 = np.arctan(np.dot(w, nt) / np.dot(u, nt))
+                if self.nfeatures == 4:
+                    features.append(np.array([f1, f2, f3, f4]))
+                elif self.nfeatures == 3:
+                    features.append(np.array([f1, f3, f4]))
+            features = np.asarray(features)
         return features
 
 class FPFH(SPFH):
