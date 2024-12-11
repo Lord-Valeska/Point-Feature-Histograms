@@ -6,7 +6,7 @@ import numpy as np
 from scipy.spatial import KDTree
 
 class PFH(object):
-    def __init__(self, pointcloud, radius, num_neighbors=8, div=2, num_features=4, percentile=0):
+    def __init__(self, pointcloud, radius, num_neighbors=8, div=2, num_features=3, percentile=0):
         self.pc = pointcloud # (N, 3)
         self.pc_neighbored_idx = []
         self.r = radius
@@ -88,7 +88,7 @@ class PFH(object):
         """
         normals = []
         curvatures = []
-        print("pc.shape before get_normals: ", self.pc.shape[0])
+        # print("pc.shape before get_normals: ", self.pc.shape[0])
         mean = np.mean(self.pc, axis=0)
         N = self.pc.shape[0]
         for i in range(N):
@@ -108,7 +108,8 @@ class PFH(object):
                 normals.append(np.array([0, 0, 0]))
                 curvatures.append(0)
                 continue
-        print("pc.shape after get_normals: ", len(self.pc_neighbored_idx))
+        # print("pc.shape after get_normals: ", len(self.pc_neighbored_idx))
+        self.pc_neighbored_idx = np.asarray(self.pc_neighbored_idx)
         return np.asarray(normals), np.asarray(curvatures)
     
     def get_categorized_idx(self):
@@ -118,7 +119,7 @@ class PFH(object):
             self.idx_featured = all_indices
             self.idx_regular = np.array([])
         else:
-            self.idx_featured = np.where(self.curvatures > np.percentile(self.curvatures, self.percentile))[0]
+            self.idx_featured = self.pc_neighbored_idx[np.where(self.curvatures > np.percentile(self.curvatures, self.percentile))[0]]
             self.idx_regular = np.setdiff1d(all_indices, self.idx_featured)
 
     def get_features(self, idx):
@@ -161,10 +162,10 @@ class PFH(object):
                     f1 = np.dot(v, nt)
                     f2 = d
                     f3 = np.dot(u, (target_point - source_point) / d)
-                    if np.dot(u,nt) == 0:
-                        f4 = np.pi/2
-                    else:
-                        f4 = np.arctan(np.dot(w, nt) / np.dot(u, nt))
+                    # if np.dot(u,nt) == 0:
+                    #     f4 = np.pi/2
+                    # else:
+                    f4 = np.arctan(np.dot(w, nt) / np.dot(u, nt))
                     if self.nfeatures == 4:
                         features.append(np.array([f1, f2, f3, f4]))
                     elif self.nfeatures == 3:
@@ -248,6 +249,7 @@ class PFH(object):
     def transform(self, R, t):
         self.pc = (R @ self.pc.T + t).T
         self.tree = None
+        self.pc_neighbored_idx = []
         self.normals, self.curvatures = self.get_normals()
         # self.get_categorized_idx()
         return self.pc
@@ -304,7 +306,7 @@ class SPFH(PFH):
 
 class FPFH(SPFH):
     def __init__(self, pointcloud, radius, num_neighbors=8, div=2, num_features=4, percentile=0):
-        super().__init__(pointcloud, radius, num_neighbors, div, num_features)
+        super().__init__(pointcloud, radius, num_neighbors, div, num_features, percentile)
         self.histogram = []
         for i in range(self.pc.shape[0]):
             self.histogram.append(self.get_feature_histogram(i))
@@ -312,6 +314,7 @@ class FPFH(SPFH):
     
     def get_all_histograms(self):
         N = self.idx_featured.shape[0]
+        print(f"# Featured: {N}")
         histograms = np.zeros((N, self.div ** self.nfeatures))
         for i, idx in enumerate(self.idx_featured):
             neighbor_indices = self.get_kNNs(idx)
@@ -323,7 +326,7 @@ class FPFH(SPFH):
         return histograms
 
 # # Old version for correspondence
-# def get_correspondence(pfh_source, pfh_target):
+# def get_pfh_correspondence(pfh_source, pfh_target):
 #     C = []
 #     histogram_source = pfh_source.get_all_histograms()
 #     histogram_target = pfh_target.get_all_histograms()

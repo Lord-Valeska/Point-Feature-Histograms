@@ -20,14 +20,16 @@ if __name__ == '__main__':
 
   # Load the PCD file
   pcd = o3d.io.read_point_cloud("data/test_terrain_1.pcd")
-  print(pcd.scale)
 
   # Apply voxel downsampling
-  voxel_size = 10  # Adjust this value to control the downsampling level
+  voxel_size = 20  # Adjust this value to control the downsampling level
   downsampled_pcd = pcd.voxel_down_sample(voxel_size)
 
   # Convert to NumPy array
   points = np.asarray(downsampled_pcd.points)
+  points *= 0.0001 # Scale
+  point_centroid = np.mean(points, axis=0, keepdims=True)
+  points = points - point_centroid
   print("Total number of points: ", points.shape[0])
 
   # # Split data into X, Y, Z components
@@ -52,11 +54,16 @@ if __name__ == '__main__':
   # Define splitting criteria (e.g., based on X-coordinate)
   x_min, x_max = np.min(points[:, 0]), np.max(points[:, 0])
   split_boundary = (x_max + x_min) / 2  # Midpoint for splitting
-  overlap_margin = 400  # Adjust for overlap size
+  overlap_margin = (x_max - x_min) * 0.5  # Adjust for overlap size
 
   # Define conditions for each part
-  part1_condition = points[:, 0] <= (split_boundary + overlap_margin)
-  part2_condition = points[:, 0] >= (split_boundary - overlap_margin)
+  part1_condition = (
+    (points[:, 0] >= (split_boundary - (x_max - x_min) * 0.3)) &
+    (points[:, 0] <= (split_boundary + (x_max - x_min) * 0.3))
+  )
+  part2_condition = points[:, 0] <= (split_boundary + overlap_margin)
+  
+
 
   # Extract points for each part
   part1_points = points[part1_condition].T
@@ -68,20 +75,12 @@ if __name__ == '__main__':
   utils.view_pc([part1_points_vis, part2_points_vis], None, ['b', 'r'], ['o', '^'])
   plt.show()
 
-  # Calculate centroids for both source and target point clouds
-  source_centroid = np.mean(part1_points, axis=1, keepdims=True)  # Shape (3, 1)
-  target_centroid = np.mean(part2_points, axis=1, keepdims=True)  # Shape (3, 1)
-
-  # Zero-center the point clouds
-  part1_points = part1_points - source_centroid
-  part2_points = part2_points - target_centroid
-
   # Apply a known rotation and translation to create the source point cloud
   print("Creating target point cloud with transformation...")
-  angle = np.pi / 6  # 30 degrees rotation
-  axis = np.array([0, 1, 0])  # Rotation around the z-axis
+  angle = np.pi / 3  # 60 degrees rotation
+  axis = np.array([0, 0, 1])  # Rotation around the z-axis
   R_true = rotation_matrix(axis, angle)
-  t_true = np.array([[600], [100], [10]]) * np.ones(part1_points.shape)  # Translation vector
+  t_true = np.array([[-0.05], [0.02], [0.003]]).reshape(3, 1)
   part1_points = R_true @ part1_points + t_true
   target_points = part2_points # (3, N)
   source_points = part1_points
@@ -96,8 +95,8 @@ if __name__ == '__main__':
   target_pc = utils.convert_matrix_to_pc(np.matrix(target_points))
 
   # Visualize the zero-centered source and target point clouds
-  # utils.view_pc([source_pc, target_pc], None, ['b', 'r'], ['o', '^'])
-  # plt.show()
+  utils.view_pc([source_pc, target_pc], None, ['b', 'r'], ['o', '^'])
+  plt.show()
 
   # --- tested --- #
 
@@ -111,11 +110,11 @@ if __name__ == '__main__':
   # Set parameters for PFH
   threshold = 1e-5 # no
   k = 8            # changeable # TODO
-  r = 20           # changeable # TODO
+  r = 0.5          # changeable # TODO
 
   # Initialize FPFH features for source and target
-  pfh_source = FPFH(P_source, r, k, 2, 3, 0) # 2(bin), 0(percentile) changeable # TODO
-  pfh_target = FPFH(P_target, r, k, 2, 3, 0) # 2(bin), 0(percentile) changeable # TODO
+  pfh_source = FPFH(P_source, r, k, 2, 3, percentile=0) # 2(bin), 0(percentile) changeable # TODO
+  pfh_target = FPFH(P_target, r, k, 2, 3, percentile=0) # 2(bin), 0(percentile) changeable # TODO
   # pfh_source = PFH(P_source, r, k, 2, 3, 0) # 2(bin), 0(percentile) changeable # TODO
   # pfh_target = PFH(P_target, r, k, 2, 3, 0) # 2(bin), 0(percentile) changeable # TODO
   errors = []
@@ -133,17 +132,8 @@ if __name__ == '__main__':
   utils.view_pc([pc_aligned, target_pc], None, ['b', 'r'], ['o', '^'])
   plt.show()
 
-
-
-
-
-
-
-
-
-
   # Perform ICP iterations
-  for i in range(50):
+  for i in range(5):
     current = time.time()
     C = get_correspondence(pfh_source, pfh_target)  # Find correspondences
     R_est, t_est = get_transform(C)  # Estimate transformation
