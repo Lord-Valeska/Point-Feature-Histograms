@@ -107,7 +107,7 @@ def test_terrain(div, k, percentile):
   utils.view_pc([source_pc, target_pc], "", None, ['b', 'r'], ['o', '^'])
   plt.title("Starting pose of source and target. Calculating...")
   plt.draw()  # Update the figure
-  plt.pause(0.1)  # Pause for 5 seconds
+  plt.pause(3)  # Pause for 5 seconds
   plt.close() 
 
   # ----- PFH ----- #
@@ -145,7 +145,7 @@ def test_terrain(div, k, percentile):
   plt.title("Initial transform by FPFH")
   # plt.show()
   plt.draw()  # Update the figure
-  plt.pause(3)  # Pause for 5 seconds
+  plt.pause(2)  # Pause for 5 seconds
   plt.close() 
 
   # Perform ICP iterations
@@ -168,7 +168,7 @@ def test_terrain(div, k, percentile):
     # Add text to the graph
     # plt.text(5, 0.5, 1, f"Total error = {total_error}", fontsize=12, color='blue')  # Place text at (5, 0.5)
     plt.draw()  # Update the figure
-    plt.pause(0.5)  # Pause for 5 seconds
+    plt.pause(1)  # Pause for 5 seconds
     plt.close()  # Close the current figure to prepare for the next
     # print(f"Alignment error: {error:.6f}")
     if len(errors) > 1:
