@@ -77,11 +77,11 @@ if __name__ == '__main__':
     # plt.show()
 
     # Test for getting correspondence
-    threshold = 1e-5
-    k = 8
-    r = 0.03
-    pfh_source = FPFH(source, r, k, 2, 3, 0)
-    pfh_target = FPFH(target, r, k, 2, 3, 0)
+    threshold = 1e-10
+    k = 27
+    r = 0.1
+    pfh_source = FPFH(source, r, k, 5, 3, 25)
+    pfh_target = FPFH(target, r, k, 5, 3, 25)
     
     errors = []
 

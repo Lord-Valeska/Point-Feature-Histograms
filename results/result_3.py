@@ -1,0 +1,10 @@
+# result of runtime and error in terms of div and percentile
+import numpy as np
+
+div_list = [2, 3, 5]
+k_list = [8, 15, 24]
+percentile_list = [0, 25, 50, 75, 100]
+performance_res = []
+performance_res.append([[19.312881231307983, np.float64(3.326176308046573e-05)], [19.50210404396057, np.float64(2.2717875963916125e-05)], [19.289212942123413, np.float64(3.4904065129252126e-05)]])
+performance_res.append([[19.515563011169434, np.float64(3.247175244352003e-05)], [19.088953018188477, np.float64(2.386096899750941e-05)], [19.404834032058716, np.float64(2.8849952237434125e-05)]])
+performance_res.append([[19.960469007492065, np.float64(2.3481733689730072e-05)], [20.62188982963562, np.float64(3.8495413143743476e-05)], [21.421661853790283, np.float64(3.261966673169496e-05)]])

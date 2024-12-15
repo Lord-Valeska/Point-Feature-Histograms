@@ -29,7 +29,76 @@ def load_pc(filename):
     return pc
 
 
-def view_pc(pcs, fig=None, color='b', marker='o'):
+# def view_pc(pcs, fig=None, color='b', marker='o'):
+#     """Visualize a pc.
+
+#     inputs:
+#         pc - a list of numpy 3 x 1 matrices that represent the points.
+#         color - specifies the color of each point cloud.
+#             if a single value all point clouds will have that color.
+#             if an array of the same length as pcs each pc will be the color corresponding to the
+#             element of color.
+#         marker - specifies the marker of each point cloud.
+#             if a single value all point clouds will have that marker.
+#             if an array of the same length as pcs each pc will be the marker corresponding to the
+#             element of marker.
+#     outputs:
+#         fig - the pyplot figure that the point clouds are plotted on
+
+#     """
+
+#     # Construct the color and marker arrays
+#     if hasattr(color, '__iter__'):
+#         if len(color) != len(pcs):
+#             raise Exception('color is not the same length as pcs')
+#     else:
+#         color = [color] * len(pcs)
+
+#     if hasattr(marker, '__iter__'):
+#         if len(marker) != len(pcs):
+#             raise Exception('marker is not the same length as pcs')
+#     else:
+#         marker = [marker] * len(pcs)
+
+#     # Start plt in interactive mode
+#     ax = []
+#     if fig == None:
+#         plt.ion()
+#         # Make a 3D figure
+#         fig = plt.figure()
+#         ax = fig.add_subplot(111, projection='3d')
+        
+#     else:
+#         ax = fig.gca()
+        
+
+#     # Draw each point cloud
+#     for pc, c, m in zip(pcs, color, marker):
+#         x = []
+#         y = []
+#         z = []
+#         for pt in pc:
+#             x.append(pt[0, 0])
+#             y.append(pt[1, 0])
+#             z.append(pt[2, 0])
+
+#         ax.scatter3D(x, y, z, color=c, marker=m, s=3)
+
+#     # Set the labels
+#     ax.set_xlabel('X')
+#     ax.set_ylabel('Y')
+#     ax.set_zlabel('Z')
+    
+#     # Update the figure
+#     plt.draw()
+#     plt.pause(0.05)
+#     plt.ioff() #turn off interactive plotting
+    
+    
+#     # Return a handle to the figure so the user can make adjustments
+#     return fig
+
+def view_pc(pcs, text, fig=None, color='b', marker='o'):
     """Visualize a pc.
 
     inputs:
@@ -82,22 +151,22 @@ def view_pc(pcs, fig=None, color='b', marker='o'):
             y.append(pt[1, 0])
             z.append(pt[2, 0])
 
-        ax.scatter3D(x, y, z, color=c, marker=m, s=1)
+        ax.scatter3D(x, y, z, color=c, marker=m, s=3)
 
     # Set the labels
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
+    ax.text(-0.05, 0.02, 0.018, text, fontsize=12, color='blue')
     
     # Update the figure
     plt.draw()
     plt.pause(0.05)
     plt.ioff() #turn off interactive plotting
-    
+
     
     # Return a handle to the figure so the user can make adjustments
     return fig
-
 
 def draw_plane(fig, normal, pt, color=(0.1, 0.2, 0.5, 0.3), length=[-1, 1], width=[-1, 1]):
     """Draws a plane on fig.

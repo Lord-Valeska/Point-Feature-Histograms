@@ -314,7 +314,7 @@ class FPFH(SPFH):
     
     def get_all_histograms(self):
         N = self.idx_featured.shape[0]
-        print(f"# Featured: {N}")
+        # print(f"# Featured: {N}")
         histograms = np.zeros((N, self.div ** self.nfeatures))
         for i, idx in enumerate(self.idx_featured):
             neighbor_indices = self.get_kNNs(idx)

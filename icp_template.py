@@ -76,8 +76,8 @@ def main(threshold=0.016, target_name='./data/cloud_icp_target0.csv'):
 
 
 if __name__ == '__main__':
-    main(threshold=0.016, target_name='./data/cloud_icp_target0.csv')
-    main(threshold=0.00001, target_name='./data/cloud_icp_target1.csv')
-    main(threshold=0.00808555, target_name='./data/cloud_icp_target2.csv')
+    # main(threshold=0.016, target_name='./data/cloud_icp_target0.csv')
+    # main(threshold=0.00001, target_name='./data/cloud_icp_target1.csv')
+    # main(threshold=0.00808555, target_name='./data/cloud_icp_target2.csv')
     main(threshold=0.04186485, target_name='./data/cloud_icp_target3.csv')
 
